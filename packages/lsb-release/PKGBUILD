@@ -1,11 +1,10 @@
-pkgname=origin-release
+pkgname=lsb-release
 pkgver=26.0
 pkgrel=1
 pkgdesc="OriginUi release definition"
 arch=("any")
 url="https://esteros-project.github.io"
 license=('GPL2')
-depends=('lsb-release')
 source=('lsb-release')
 install="origin-release.install"
 sha256sums=('5f0f46dece2cf66c8dc73b896a8e08d1b21c7e7c334b0690d751163317a2279e')
