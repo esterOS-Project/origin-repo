@@ -8,7 +8,7 @@ license=('GPL2')
 depends=('lsb-release')
 source=('lsb-release')
 install="origin-release.install"
-sha256sums=('8d1162e3cc2885d584e96944eaf6d965832609376179fd1794f3d60332b4e3bc')
+sha256sums=('5f0f46dece2cf66c8dc73b896a8e08d1b21c7e7c334b0690d751163317a2279e')
 
 # pkgver() {
 #     #parse lsb-release
