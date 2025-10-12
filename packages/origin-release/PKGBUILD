@@ -7,7 +7,7 @@ url="https://esteros-project.github.io"
 license=('GPL2')
 depends=('lsb-release')
 source=('lsb-release')
-install="quenva-release.install"
+install="origin-release.install"
 sha256sums=('8d1162e3cc2885d584e96944eaf6d965832609376179fd1794f3d60332b4e3bc')
 
 # pkgver() {
