@@ -1,0 +1,22 @@
+pkgname=origin-wallpapers
+_pkgname=origin-wallpapers
+_destname1="/usr/share/backgrounds/origin/"
+#_licensedir="/usr/share/arcolinux/licenses/"
+pkgver=26
+pkgrel=2
+pkgdesc="Wallpapers for OriginUi"
+arch=('any')
+url="https://esteros-project.github.io"
+license=('GPL3')
+makedepends=('git')
+provides=("${pkgname}")
+options=(!strip !emptydirs)
+source=(${_pkgname}::"git+https://github.com/esterOS-Project/${_pkgname}.git")
+sha256sums=('SKIP')
+package() {
+#	install -dm755 ${pkgdir}${_licensedir}${_pkgname}
+#	install -m644  ${srcdir}/${_pkgname}/LICENSE ${pkgdir}${_licensedir}${_pkgname}
+
+	install -dm755 ${pkgdir}${_destname1}
+	cp -r  ${srcdir}/${_pkgname}${_destname1}* ${pkgdir}${_destname1}
+}

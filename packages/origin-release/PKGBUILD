@@ -1,0 +1,23 @@
+pkgname=origin-release
+pkgver=26.0
+pkgrel=1
+pkgdesc="OriginUi release definition"
+arch=("any")
+url="https://esteros-project.github.io"
+license=('GPL2')
+depends=('lsb-release')
+source=('lsb-release')
+install="quenva-release.install"
+sha256sums=('8d1162e3cc2885d584e96944eaf6d965832609376179fd1794f3d60332b4e3bc')
+
+# pkgver() {
+#     #parse lsb-release
+#     grep 'DISTRIB_RELEASE='  lsb-release | cut -d '=' -f2
+# }
+
+package() {
+    # Copy files
+    mkdir -p ${pkgdir}/etc
+    install -m644 ${srcdir}/lsb-release ${pkgdir}/etc/
+}
+
