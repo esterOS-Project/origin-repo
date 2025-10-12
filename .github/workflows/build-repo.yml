@@ -1,10 +1,14 @@
-name: Build and Deploy
+name: Build and Deploy to GitHub Pages
 
 on:
   push:
     branches:
       - '**'  # Run on all branches
   workflow_dispatch:
+
+permissions:
+  pages: write
+  id-token: write
 
 jobs:
   build:
@@ -34,7 +38,7 @@ jobs:
             fi
           fi
 
-      - name: Upload artifacts
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: build-artifacts
@@ -48,11 +52,14 @@ jobs:
     container: archlinux:latest
     needs: build
     if: github.ref == 'refs/heads/main'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Download artifacts
+      - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: build-artifacts
@@ -67,9 +74,11 @@ jobs:
           echo "Root index preview:"
           head -n 20 public/index.html || true
 
-      - name: Upload deploy artifacts
-        uses: actions/upload-artifact@v4
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          name: deploy-artifacts
           path: public
-          retention-days: 7
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
