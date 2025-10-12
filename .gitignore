@@ -1,0 +1,43 @@
+# Автоматично згенеровані директорії
+/public/
+/public_html/
+
+# Логи збірок
+build.log
+*.log
+
+# Артефакти збірок
+*.pkg.tar.*
+*.db*
+*.files*
+*.sig
+
+# Директорії пакетів після збірки
+**/src/
+**/pkg/
+
+# Системні файли
+.DS_Store
+.Trash-*
+.idea/
+.vscode/
+*.swp
+*.bak
+*~
+
+# Кеш makepkg
+*.srcinfo
+*.log
+**/.SRCINFO
+
+# Файли середовища
+.env
+*.secret
+
+# Вихідні коди (якщо вони генеруються)
+*.o
+*.so
+*.a
+
+# GitLab CI кеш
+.cache/

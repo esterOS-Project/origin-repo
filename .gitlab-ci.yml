@@ -1,0 +1,50 @@
+stages:
+  - build
+  - deploy
+
+build_repo:
+  stage: build
+  image: archlinux:latest
+  before_script:
+    - pacman -Syu --noconfirm base-devel git pacman-contrib sudo
+  script:
+    - chmod +x ./scripts/build-repo.sh
+    - |
+      if ./scripts/build-repo.sh; then
+          echo "BUILD_SUCCESS"
+      else
+          echo "BUILD_FAILED"
+          # Detailed error analyze
+          if grep -q "CI_STATUS: SUCCESS" build.log; then
+              echo "ERROR: Script reported success but exited with error"
+              exit 1
+          else
+              cat build.log
+              exit 1
+          fi
+      fi
+  artifacts:
+    paths:
+      - public
+      - build.log
+    expire_in: 1 week
+
+pages:
+  stage: deploy
+  dependencies:
+    - build_repo
+  image: archlinux:latest
+  before_script:
+    # Ensure basic shell tools are available, and our new script is executable
+    - pacman -Syu --noconfirm coreutils
+    - chmod +x scripts/generate-index.sh
+  script:
+    - ./scripts/generate-index.sh
+    - echo "Root index preview:"
+    - head -n 20 public/index.html || true
+  artifacts:
+    paths:
+      - public
+    expire_in: 1 week
+  only:
+    - main

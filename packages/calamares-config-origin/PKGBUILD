@@ -1,0 +1,19 @@
+# Maintainer: Andreas Muller <smidtandrea09@gmail.com>
+pkgname=calamares-config-origin
+_destname1="/etc"
+pkgver=26
+pkgrel=01
+pkgdesc="calamares for OriginUi"
+arch=('any')
+url="https://gitlab.com/ester-project/calamares-config-origin"
+license=('GPL3')
+makedepends=('git')
+depends=()
+provides=("${pkgname}")
+options=(!strip !emptydirs)
+source=(${pkgname}::"git+${url}")
+sha256sums=('SKIP')
+package() {
+	install -dm755 ${pkgdir}${_destname1}
+	cp -r ${srcdir}/${pkgname}${_destname1}/* ${pkgdir}${_destname1}
+}
