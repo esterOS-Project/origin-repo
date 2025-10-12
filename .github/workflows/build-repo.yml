@@ -1,0 +1,75 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - '**'  # Run on all branches
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: pacman -Syu --noconfirm base-devel git pacman-contrib sudo
+
+      - name: Build repo
+        run: |
+          chmod +x ./scripts/build-repo.sh
+          if ./scripts/build-repo.sh; then
+            echo "BUILD_SUCCESS"
+          else
+            echo "BUILD_FAILED"
+            # Detailed error analyze
+            if grep -q "CI_STATUS: SUCCESS" build.log; then
+              echo "ERROR: Script reported success but exited with error"
+              exit 1
+            else
+              cat build.log
+              exit 1
+            fi
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            public
+            build.log
+          retention-days: 7
+
+  deploy:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+
+      - name: Install dependencies
+        run: pacman -Syu --noconfirm coreutils
+
+      - name: Generate index
+        run: |
+          chmod +x scripts/generate-index.sh
+          ./scripts/generate-index.sh
+          echo "Root index preview:"
+          head -n 20 public/index.html || true
+
+      - name: Upload deploy artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-artifacts
+          path: public
+          retention-days: 7
