@@ -52,17 +52,16 @@ ensure_pacman_db() {
     pacman -Sy --noconfirm || true
 }
 
-# Parse package dependencies from PKGBUILD
-get_deps_from_pkgbuild() {
+# Parse and pre-install makedepends from PKGBUILD to avoid makepkg failing to install dev deps
+get_makedepends_from_pkgbuild() {
     local pkg_dir="$1"
-    local dep_type="$2"  # 'depends' or 'makedepends'
     local pkgb="$pkg_dir/PKGBUILD"
     [[ -f "$pkgb" ]] || { echo ""; return; }
 
-    # Extract content between depends/makedepends=( and the closing )
+    # Extract content between makedepends=( and the closing )
     local raw
-    raw=$(sed -n "/^${dep_type}[[:space:]]*=/,/)/p" "$pkgb" 2>/dev/null || true)
-    # If deps are on single line like depends=( 'a' 'b' ) this still works
+    raw=$(sed -n '/^makedepends[[:space:]]*=/,/)/p' "$pkgb" 2>/dev/null || true)
+    # If makedepends is on single line like makedepends=( 'a' 'b' ) this still works
     # Remove the first line up to the opening parenthesis and the trailing closing parenthesis
     raw=$(printf "%s" "$raw" | sed '1s/^[^=(]*=(//; $s/).*//')
     # Remove quotes and split into whitespace-separated tokens
@@ -71,20 +70,19 @@ get_deps_from_pkgbuild() {
     printf "%s" "$deps"
 }
 
-preinstall_deps() {
+preinstall_makedepends() {
     local pkg_dir="$1"
-    local dep_type="$2"
     local deps
-    deps=$(get_deps_from_pkgbuild "$pkg_dir" "$dep_type")
+    deps=$(get_makedepends_from_pkgbuild "$pkg_dir")
     if [[ -n "$deps" ]]; then
-        info "⬇️ Installing $dep_type for $(basename "$pkg_dir"): $deps"
+        info "⬇️ Installing makedepends for $(basename "$pkg_dir"): $deps"
         # Install only missing packages; allow failure to return error and let build continue/fail naturally
         if ! pacman -S --noconfirm --needed $deps; then
-            info "⚠️ Failed to install some $dep_type via pacman. Will still attempt makepkg which may try to install them as builder."
+            info "⚠️ Failed to install some makedepends via pacman. Will still attempt makepkg which may try to install them as builder."
             return 1
         fi
     else
-        info "ℹ️ No $dep_type detected for $(basename "$pkg_dir")"
+        info "ℹ️ No makedepends detected for $(basename "$pkg_dir")"
     fi
 }
 
@@ -95,12 +93,9 @@ build_single_package() {
     
     info "🔨 Building package: ${pkg_name}"
     
-    # Pre-install deps and makedepends as root to avoid privilege issues inside makepkg
-    if ! preinstall_deps "$pkg_dir" "depends"; then
-        info "⚠️ preinstall_deps (depends) returned non-zero for ${pkg_name}. Proceeding anyway."
-    fi
-    if ! preinstall_deps "$pkg_dir" "makedepends"; then
-        info "⚠️ preinstall_deps (makedepends) returned non-zero for ${pkg_name}. Proceeding anyway."
+    # Pre-install makedepends as root to avoid privilege issues inside makepkg
+    if ! preinstall_makedepends "$pkg_dir"; then
+        info "⚠️ preinstall_makedepends returned non-zero for ${pkg_name}. Proceeding to makepkg anyway."
     fi
     
     sudo -u builder bash <<EOF
@@ -111,7 +106,7 @@ build_single_package() {
         rm -f ./*.pkg.tar.* || true
         
         # Building packages (makepkg will still try to install makedepends if needed)
-        makepkg -s --noconfirm --skippgpcheck
+        makepkg -s --noconfirm --skippgpcheck --syncdeps
         
         # Checking artifacts
         mv -v ./*.pkg.tar.* "${PUBLIC_DIR}/${ARCH}/"
