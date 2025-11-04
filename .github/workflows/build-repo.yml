@@ -3,7 +3,7 @@ name: Build and Deploy to GitHub Pages
 on:
   push:
     branches:
-      - 'main'  # Run on all branches
+      - 'repo'  # Run on all branches
   workflow_dispatch:
 
 permissions:
