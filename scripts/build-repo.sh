@@ -106,7 +106,7 @@ build_single_package() {
         rm -f ./*.pkg.tar.* || true
         
         # Building packages (makepkg will still try to install makedepends if needed)
-        makepkg -s --noconfirm --skippgpcheck --syncdeps
+        makepkg -si --noconfirm --skippgpcheck --syncdeps
         
         # Checking artifacts
         mv -v ./*.pkg.tar.* "${PUBLIC_DIR}/${ARCH}/"
