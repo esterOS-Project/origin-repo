@@ -45,12 +45,58 @@ prepare_dirs() {
     chmod 777 -R "${PUBLIC_DIR}"
 }
 
+# Ensure pacman DB is available and up-to-date so makepkg can install makedepends
+ensure_pacman_db() {
+    info "📥 Ensuring pacman DB is up-to-date..."
+    # try to update package DB only (faster than full -Syu in CI container)
+    pacman -Sy --noconfirm || true
+}
+
+# Parse and pre-install makedepends from PKGBUILD to avoid makepkg failing to install dev deps
+get_makedepends_from_pkgbuild() {
+    local pkg_dir="$1"
+    local pkgb="$pkg_dir/PKGBUILD"
+    [[ -f "$pkgb" ]] || { echo ""; return; }
+
+    # Extract content between makedepends=( and the closing )
+    local raw
+    raw=$(sed -n '/^makedepends[[:space:]]*=/,/)/p' "$pkgb" 2>/dev/null || true)
+    # If makedepends is on single line like makedepends=( 'a' 'b' ) this still works
+    # Remove the first line up to the opening parenthesis and the trailing closing parenthesis
+    raw=$(printf "%s" "$raw" | sed '1s/^[^=(]*=(//; $s/).*//')
+    # Remove quotes and split into whitespace-separated tokens
+    local deps
+    deps=$(printf "%s" "$raw" | tr -d "'\"" | tr '\n' ' ' | xargs)
+    printf "%s" "$deps"
+}
+
+preinstall_makedepends() {
+    local pkg_dir="$1"
+    local deps
+    deps=$(get_makedepends_from_pkgbuild "$pkg_dir")
+    if [[ -n "$deps" ]]; then
+        info "⬇️ Installing makedepends for $(basename "$pkg_dir"): $deps"
+        # Install only missing packages; allow failure to return error and let build continue/fail naturally
+        if ! pacman -S --noconfirm --needed $deps; then
+            info "⚠️ Failed to install some makedepends via pacman. Will still attempt makepkg which may try to install them as builder."
+            return 1
+        fi
+    else
+        info "ℹ️ No makedepends detected for $(basename "$pkg_dir")"
+    fi
+}
+
 # One package build
 build_single_package() {
     local pkg_dir="$1"
     local pkg_name=$(basename "${pkg_dir}")
     
     info "🔨 Building package: ${pkg_name}"
+    
+    # Pre-install makedepends as root to avoid privilege issues inside makepkg
+    if ! preinstall_makedepends "$pkg_dir"; then
+        info "⚠️ preinstall_makedepends returned non-zero for ${pkg_name}. Proceeding to makepkg anyway."
+    fi
     
     sudo -u builder bash <<EOF
         set -e
@@ -59,7 +105,7 @@ build_single_package() {
         # Cleaning previous packages
         rm -f ./*.pkg.tar.* || true
         
-        # Building packages
+        # Building packages (makepkg will still try to install makedepends if needed)
         makepkg -s --noconfirm --skippgpcheck
         
         # Checking artifacts
@@ -133,6 +179,7 @@ main() {
     info "🚀 Build start: $(date)"
     
     create_builder_user
+    ensure_pacman_db
     prepare_dirs
     build_packages
     generate_repo
